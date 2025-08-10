@@ -6,6 +6,14 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MathCore.HackRF", "MathCore.HackRF\MathCore.HackRF.csproj", "{416DDE4B-B511-470C-83F5-0E866D2D669F}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".Service", ".Service", "{2507A7F8-E9DD-CD81-FF78-9340A71A364C}"
+	ProjectSection(SolutionItems) = preProject
+		.gitignore = .gitignore
+		clear-cache.bat = clear-cache.bat
+		clear-obj.bat = clear-obj.bat
+		clear.bat = clear.bat
+		LICENSE.txt = LICENSE.txt
+		README.md = README.md
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".github", ".github", "{9A101D2F-09DE-510E-A404-93C7862E5949}"
 	ProjectSection(SolutionItems) = preProject

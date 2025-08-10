@@ -1,112 +1,50 @@
 ﻿# MathCore.HackRF
 
-Библиотека управления SDR HackRF One для .NET
+Высокоуровневая C# библиотека для управления SDR-устройством HackRF One.
 
-## Описание
+## 🚀 Быстрый старт
 
-MathCore.HackRF — это высокоуровневая C# обёртка для работы с SDR-устройством HackRF One. Библиотека предоставляет полный доступ к функциональности устройства через простой и безопасный API.
+### Установка
 
-## Поддерживаемые платформы
-- .NET 9
-- .NET 8
+```bash
+dotnet add package MathCore.HackRF
+```
 
-## Основные возможности
-
-### Управление устройством
-- Инициализация и подключение к HackRF One
-- Получение информации об устройстве (версия, серийный номер, идентификатор платы)
-- Поддержка нескольких устройств одновременно
-- Безопасное управление ресурсами через SafeHandle
-
-### Настройка радиопараметров
-- **Частота**: установка рабочей частоты (30 МГц - 6 ГГц)
-- **Частота дискретизации**: 2-20 МГц с возможностью ручной настройки делителя
-- **Полоса пропускания**: настройка базового фильтра (1.75-28 МГц)
-- **Усиление**:
-  - LNA (Low Noise Amplifier): 0-40 дБ с шагом 8 дБ
-  - VGA (Variable Gain Amplifier): 0-62 дБ с шагом 2 дБ
-  - TX VGA: 0-47 дБ с шагом 1 дБ
-
-### Режимы работы
-- **Приём (RX)**: потоковый приём данных с callback-обработкой
-- **Передача (TX)**: потоковая передача данных
-- **Развёртка (Sweep)**: автоматическое сканирование диапазонов частот
-  - Линейная и псевдослучайная развёртка
-  - Настраиваемые параметры шага и диапазонов
-
-### Дополнительные функции
-- Управление питанием антенны
-- Настройка аппаратной синхронизации для нескольких устройств
-- Выходной тактовый сигнал для синхронизации
-- Доступ к низкоуровневым регистрам (MAX2837, SI5351C, RFFC5071)
-- Работа с SPI флеш-памятью и CPLD
-
-## Основные классы и структуры
-
-### HackRFLib
-Основной статический класс, содержащий все P/Invoke методы для работы с нативной библиотекой hackrf.dll.
-
-### TransferInfo
-Структура для передачи данных между устройством и приложением в callback-функциях.
-
-### DeviceListSafeHandle
-Безопасная обёртка для списка устройств с автоматическим освобождением ресурсов.
-
-### Перечисления
-- **HackRfError**: коды ошибок библиотеки
-- **BoardType**: типы поддерживаемых плат (HackRF One, Jawbreaker, rad1o)
-- **FilterType**: типы фильтров для явного задания частоты
-
-## Пример использования
+### Базовый пример
 
 ```csharp
 using MathCore.HackRF;
 
-// Инициализация библиотеки
-var init_result = HackRFLib.Initialize();
-if (init_result != HackRfError.Success)
-    throw new Exception($"Ошибка инициализации: {init_result}");
+// Инициализация
+HackRFLib.Initialize();
 
 try
 {
-    // Получение списка устройств
-    using var device_list = HackRFLib.GetDeviceList();
-    var serial_numbers = HackRFLib.GetSerialNumbers(device_list);
-    
-    if (serial_numbers.Length == 0)
-        throw new Exception("HackRF устройства не найдены");
-    
-    // Открытие первого устройства
-    var open_result = HackRFLib.Open(out var device);
-    if (open_result != HackRfError.Success)
-        throw new Exception($"Ошибка открытия устройства: {open_result}");
-    
-    try
+    // Открытие устройства
+    var result = HackRFLib.Open(out var device);
+    if (result != HackRfError.Success)
+        throw new Exception($"Ошибка: {result}");
+
+    // Настройка
+    HackRFLib.SetFreq(device, 100_000_000);      // 100 МГц
+    HackRFLib.SetSampleRate(device, 10_000_000); // 10 МГц
+    HackRFLib.SetLnaGain(device, 16);            // 16 дБ
+    HackRFLib.SetVgaGain(device, 20);            // 20 дБ
+
+    // Приём данных
+    HackRfDelegate callback = (ref TransferInfo transfer) =>
     {
-        // Настройка параметров
-        HackRFLib.SetFreq(device, 100_000_000); // 100 МГц
-        HackRFLib.SetSampleRate(device, 10_000_000); // 10 МГц
-        HackRFLib.SetLnaGain(device, 16); // 16 дБ
-        HackRFLib.SetVgaGain(device, 20); // 20 дБ
-        
-        // Запуск приёма
-        HackRfDelegate callback = (ref TransferInfo transfer) =>
-        {
-            var data = transfer.RxBytes;
-            // Обработка принятых данных
-            return 0;
-        };
-        
-        HackRFLib.StartRx(device, callback);
-        
-        // Работа с данными...
-        
-        HackRFLib.StopRx(device);
-    }
-    finally
-    {
-        HackRFLib.Close(device);
-    }
+        var data = transfer.RxBytes;
+        // Обработка данных
+        return 0;
+    };
+
+    HackRFLib.StartRx(device, callback);
+    
+    // Ваша логика обработки...
+    
+    HackRFLib.StopRx(device);
+    HackRFLib.Close(device);
 }
 finally
 {
@@ -114,26 +52,157 @@ finally
 }
 ```
 
-## Установка
+## 📋 Основные возможности
 
-1. Скачайте и установите пакет через NuGet Package Manager
-2. Убедитесь, что файл `hackrf.dll` находится в папке с исполняемым файлом или в PATH
-3. Драйверы HackRF должны быть установлены в системе
+### Управление устройством
+- Инициализация и подключение к HackRF One
+- Получение информации об устройстве 
+- Поддержка нескольких устройств одновременно
+- Безопасное управление ресурсами
 
-## Технические требования
+### Настройка радиопараметров
+- **Частота**: 30 МГц - 6 ГГц
+- **Частота дискретизации**: 2-20 МГц
+- **Полоса пропускания**: 1.75-28 МГц
+- **Усиление LNA**: 0-40 дБ (шаг 8 дБ)
+- **Усиление VGA**: 0-62 дБ (шаг 2 дБ)
+- **Усиление TX VGA**: 0-47 дБ (шаг 1 дБ)
 
-- HackRF One или совместимое устройство
-- Windows (x64) с установленными драйверами HackRF
-- Нативная библиотека hackrf.dll
+### Режимы работы
+- **Приём (RX)**: потоковый приём с callback-обработкой
+- **Передача (TX)**: потоковая передача данных
+- **Развёртка**: автоматическое сканирование частот
 
-## Лицензия
-MIT
+## 🔧 API Reference
 
-## Автор
-Шмачилин Павел (shmachilin@yandex.ru)
+### Основные методы
 
-## Ссылки
-- [Репозиторий проекта](https://github.com/infarh/mathcore.hackrf)
-- [Официальная документация HackRF](https://hackrf.readthedocs.io/)
-- [Драйверы и ПО для HackRF](https://github.com/greatscottgadgets/hackrf)
+```csharp
+// Инициализация библиотеки
+HackRfError Initialize()
+void Exit()
+
+// Управление устройствами
+HackRfError Open(out IntPtr device)
+HackRfError Close(IntPtr device)
+DeviceListSafeHandle GetDeviceList()
+
+// Настройка параметров
+HackRfError SetFreq(IntPtr device, ulong freq_hz)
+HackRfError SetSampleRate(IntPtr device, double freq_hz)
+HackRfError SetLnaGain(IntPtr device, uint value)
+HackRfError SetVgaGain(IntPtr device, uint value)
+HackRfError SetBasebandFilterBandwidth(IntPtr device, uint bandwidth_hz)
+
+// Приём и передача
+HackRfError StartRx(IntPtr device, HackRfDelegate callback)
+HackRfError StopRx(IntPtr device)
+HackRfError StartTx(IntPtr device, HackRfDelegate callback)
+HackRfError StopTx(IntPtr device)
+
+// Развёртка частот
+HackRfError InitSweep(IntPtr device, ushort[] frequency_list, int num_ranges, 
+                      uint num_bytes, uint step_width, uint offset, int style)
+```
+
+### Структуры и перечисления
+
+```csharp
+// Информация о передаче данных
+public struct TransferInfo
+{
+    public IntPtr Device { get; set; }
+    public byte[] Buffer { get; set; }
+    public int BufferLength { get; set; }
+    public int ValidLength { get; set; }
+    public byte[] RxBytes => Buffer[..ValidLength];
+}
+
+// Коды ошибок
+public enum HackRfError
+{
+    Success = 0,
+    InvalidParam = -2,
+    NotFound = -5,
+    Busy = -6,
+    NoMem = -11,
+    LibUsb = -1000,
+    Thread = -1001,
+    StreamingThreadErr = -1002,
+    StreamingStopped = -1003,
+    Other = -9999
+}
+
+// Типы плат
+public enum BoardType : byte
+{
+    JawBreaker = 0,
+    HackRfOne = 1,
+    Rad1o = 2,
+    Unknown = 0xFF
+}
+```
+
+## 💻 Системные требования
+
+- **.NET**: 8.0 или 9.0
+- **ОС**: Windows x64
+- **Оборудование**: HackRF One или совместимое устройство
+- **Драйверы**: установленные драйверы HackRF
+- **Библиотеки**: hackrf.dll, libusb-1.0.dll, pthreadVC2.dll (включены в пакет)
+
+## 📚 Дополнительные примеры
+
+### Получение информации об устройстве
+
+```csharp
+// Получение списка устройств
+using var device_list = HackRFLib.GetDeviceList();
+var serials = HackRFLib.GetSerialNumbers(device_list);
+
+Console.WriteLine($"Найдено устройств: {serials.Length}");
+foreach (var serial in serials)
+    Console.WriteLine($"Серийный номер: {serial}");
+
+// Информация о плате
+if (HackRFLib.Open(out var device) == HackRfError.Success)
+{
+    var board_id = HackRFLib.GetBoardId(device);
+    var version = HackRFLib.GetVersion(device);
+    Console.WriteLine($"Плата: {board_id}, Версия: {version}");
+    
+    HackRFLib.Close(device);
+}
+```
+
+### Развёртка частот
+
+```csharp
+// Настройка сканирования
+ushort[] frequencies = [100, 200, 300, 400, 500]; // МГц
+uint bytes_per_step = 8192;
+uint step_width = 1000; // мкс
+
+HackRFLib.InitSweep(device, frequencies, frequencies.Length,
+                    bytes_per_step, step_width, 0, 0);
+
+// Запуск развёртки
+HackRfDelegate sweep_callback = (ref TransferInfo transfer) =>
+{
+    // Обработка данных развёртки
+    return 0;
+};
+
+HackRFLib.StartRx(device, sweep_callback);
+```
+
+## 🔗 Полезные ссылки
+
+- [Исходный код](https://github.com/infarh/mathcore.hackrf)
+- [Документация HackRF](https://hackrf.readthedocs.io/)
+- [Драйверы HackRF](https://github.com/greatscottgadgets/hackrf)
+
+## 📝 Лицензия
+
+MIT License - Шмачилин Павел (shmachilin@yandex.ru)
 
