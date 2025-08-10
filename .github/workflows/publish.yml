@@ -73,9 +73,13 @@ jobs:
         with:
           name: nuget-packages
           path: ${{ github.workspace }}/artifacts
+          
+      - name: List artifacts
+        run: ls -la ${{ github.workspace }}/artifacts/
             
       - name: Publish to NuGet.org
-        run: dotnet nuget push "${{ github.workspace }}/artifacts/*.nupkg" --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+        working-directory: ${{ github.workspace }}/artifacts
+        run: dotnet nuget push "**/*.nupkg" --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
         
   publish-github:
     name: Publish to GitHub Packages
@@ -89,6 +93,10 @@ jobs:
         with:
           name: nuget-packages
           path: ${{ github.workspace }}/artifacts
+          
+      - name: List artifacts
+        run: ls -la ${{ github.workspace }}/artifacts/
             
       - name: Publish to GitHub Packages
-        run: dotnet nuget push "${{ github.workspace }}/artifacts/*.nupkg" --source https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate
+        working-directory: ${{ github.workspace }}/artifacts
+        run: dotnet nuget push "**/*.nupkg" --source https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate
