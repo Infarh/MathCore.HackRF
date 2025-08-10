@@ -1,0 +1,94 @@
+﻿name: Publish NuGet.org
+
+on:
+  push:
+    branches: 
+      - master
+    paths-ignore: 
+      - '.github/workflows/**'
+      - '**.md'
+      - '**.docx'
+      - '**.bat'
+      - '**.vssettings'
+  workflow_dispatch: # Ручной запуск workflow
+
+env:
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+  DOTNET_NOLOGO: true
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+          
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build projects
+        run: |
+          dotnet build MathCore.HackRF -c Release --no-restore
+          dotnet build Tests/MathCore.HackRFTests -c Release --no-restore
+
+      - name: Run tests
+        run: dotnet test Tests/MathCore.HackRFTests -c Release --no-build --verbosity normal
+
+      - name: Create NuGet package
+        run: dotnet pack MathCore.HackRF -c Release --no-build -o ${{ github.workspace }}/artifacts --include-symbols --include-source
+      
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-packages
+          path: ${{ github.workspace }}/artifacts
+          retention-days: 7
+        
+  publish-nuget:
+    name: Publish to NuGet.org
+    needs: [build]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: nuget-packages
+          path: ${{ github.workspace }}/artifacts
+            
+      - name: Publish to NuGet.org
+        run: dotnet nuget push "${{ github.workspace }}/artifacts/*.nupkg" --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+        
+  publish-github:
+    name: Publish to GitHub Packages
+    needs: [build]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: nuget-packages
+          path: ${{ github.workspace }}/artifacts
+            
+      - name: Publish to GitHub Packages
+        run: dotnet nuget push "${{ github.workspace }}/artifacts/*.nupkg" --source https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate
