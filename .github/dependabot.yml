@@ -4,7 +4,7 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
-    open-pull-requests-limit: 5 # Максимум 5 открытых PR
+    open-pull-requests-limit: 5
     commit-message:
       prefix: "ci"
     labels:
@@ -19,7 +19,7 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
-    open-pull-requests-limit: 5 # Максимум 5 открытых PR
+    open-pull-requests-limit: 5
     commit-message:
       prefix: "deps"
     labels:
@@ -27,7 +27,7 @@ updates:
       - "nuget"
     ignore:
       - dependency-name: "*"
-        update-types: ["version-update:semver-major"] # Игнорировать major-обновления
+        update-types: ["version-update:semver-major"]
     groups:
       nuget-packages:
         patterns:
