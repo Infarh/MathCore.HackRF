@@ -11,7 +11,50 @@
   </PropertyGroup>
 
   <PropertyGroup>
+    <Version>0.0.0</Version>
+    <PackageReleaseNotes>
+      Старт проекта
+    </PackageReleaseNotes>
+  </PropertyGroup>
 
+  <PropertyGroup>
+    <Title>MathCore.HackRF</Title>
+    <Summary>Краткое описание пакета (замените на актуальное)</Summary>
+    <Owners>Шмачилин Павел</Owners>
+    <!--<PackageIcon>icon.png</PackageIcon>-->
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <MinClientVersion>3.3.0</MinClientVersion>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryBranch>main</RepositoryBranch>
+    <!--<RepositoryCommit>COMMIT_HASH</RepositoryCommit>-->
+    <IsPackable>true</IsPackable>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <Copyright>shmachilin@yandex.ru</Copyright>
+    <Authors>Shmachilin P.A.</Authors>
+    <PackageProjectUrl>github.com/infarh/mathcore.hackrf</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/infarh/mathcore.hackrfr.git</RepositoryUrl>
+    <Description>Библиотека управления SDR HackRF One</Description>
+    <PackageTags>HackRF;DSP</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>MathCoreSign.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Using Include="System.Diagnostics.DebuggerStepThroughAttribute" Alias="DST" />
+  </ItemGroup>
+
+  <PropertyGroup Condition="'$(Configuration)'=='Release'">
+    <DocumentationFile>MathCore.HackRF.xml</DocumentationFile>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
   </PropertyGroup>
 
 </Project>
