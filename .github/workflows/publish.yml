@@ -78,7 +78,6 @@ jobs:
         run: ls -la ${{ github.workspace }}/artifacts/
             
       - name: Publish to NuGet.org
-        working-directory: ${{ github.workspace }}/artifacts
         run: dotnet nuget push "**/*.nupkg" --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
         
   publish-github:
@@ -98,5 +97,17 @@ jobs:
         run: ls -la ${{ github.workspace }}/artifacts/
             
       - name: Publish to GitHub Packages
-        working-directory: ${{ github.workspace }}/artifacts
         run: dotnet nuget push "**/*.nupkg" --source https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate
+
+  cleanup-artifacts:
+    name: Clean up build artifacts
+    needs: [publish-nuget, publish-github]
+    runs-on: ubuntu-latest
+    if: always() && (needs.publish-nuget.result == 'success' || needs.publish-github.result == 'success')
+    
+    steps:
+      - name: Delete artifacts
+        uses: geekyeggo/delete-artifact@v5
+        with:
+          name: nuget-packages
+          failOnError: false
