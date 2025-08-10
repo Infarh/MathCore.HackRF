@@ -5,6 +5,26 @@ VisualStudioVersion = 17.14.36401.2
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MathCore.HackRF", "MathCore.HackRF\MathCore.HackRF.csproj", "{416DDE4B-B511-470C-83F5-0E866D2D669F}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".Service", ".Service", "{2507A7F8-E9DD-CD81-FF78-9340A71A364C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".github", ".github", "{9A101D2F-09DE-510E-A404-93C7862E5949}"
+	ProjectSection(SolutionItems) = preProject
+		.github\copilot-instructions.md = .github\copilot-instructions.md
+		.github\dependabot.yml = .github\dependabot.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{EBCEE82E-93CD-E1C7-AD13-44D2B146BFA6}"
+	ProjectSection(SolutionItems) = preProject
+		.github\workflows\publish.yml = .github\workflows\publish.yml
+		.github\workflows\testing.yml = .github\workflows\testing.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{0AB3BF05-4346-4AA6-1389-037BE0695223}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MathCore.HackRF.ConsoleTests", "Tests\MathCore.HackRF.ConsoleTests\MathCore.HackRF.ConsoleTests.csproj", "{A0663B78-7769-4603-B648-EBC840B5D71A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MathCore.HackRFTests", "Tests\MathCore.HackRFTests\MathCore.HackRFTests.csproj", "{60C5CF53-67B6-49D8-B9FE-C39C7C108524}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,9 +35,23 @@ Global
 		{416DDE4B-B511-470C-83F5-0E866D2D669F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{416DDE4B-B511-470C-83F5-0E866D2D669F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{416DDE4B-B511-470C-83F5-0E866D2D669F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A0663B78-7769-4603-B648-EBC840B5D71A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A0663B78-7769-4603-B648-EBC840B5D71A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A0663B78-7769-4603-B648-EBC840B5D71A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A0663B78-7769-4603-B648-EBC840B5D71A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{60C5CF53-67B6-49D8-B9FE-C39C7C108524}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{60C5CF53-67B6-49D8-B9FE-C39C7C108524}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{60C5CF53-67B6-49D8-B9FE-C39C7C108524}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{60C5CF53-67B6-49D8-B9FE-C39C7C108524}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{9A101D2F-09DE-510E-A404-93C7862E5949} = {2507A7F8-E9DD-CD81-FF78-9340A71A364C}
+		{EBCEE82E-93CD-E1C7-AD13-44D2B146BFA6} = {9A101D2F-09DE-510E-A404-93C7862E5949}
+		{A0663B78-7769-4603-B648-EBC840B5D71A} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{60C5CF53-67B6-49D8-B9FE-C39C7C108524} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {38C57C2E-4415-428F-8154-4DF684EA1779}

@@ -1,0 +1,44 @@
+﻿name: Testing
+
+on:
+  push:
+    branches: 
+      - '*'
+    paths-ignore: 
+      - '.github/workflows/**'
+      - '**.md'
+      - '**.docx'
+      - '**.bat'
+      - '**.vssettings'
+  workflow_dispatch: # Ручной запуск workflow
+
+env:
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+  DOTNET_NOLOGO: true
+
+jobs:
+  test:
+    name: Test on .NET
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build projects
+        run: |
+          dotnet build MathCore.HackRF --no-restore
+          dotnet build Tests/MathCore.HackRFTests --no-restore
+
+      - name: Run Tests
+        run: dotnet test Tests/MathCore.HackRFTests --no-build --verbosity normal
