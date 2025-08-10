@@ -5,6 +5,7 @@
       net9.0;
       net8.0;
     </TargetFrameworks>
+    <Nullable>enable</Nullable>
     <LangVersion>preview</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
@@ -45,6 +46,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Using Include="MathCore.HackRF.Infrastructure.Extensions" />
     <Using Include="System.Diagnostics.DebuggerStepThroughAttribute" Alias="DST" />
   </ItemGroup>
 
@@ -57,9 +59,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="hackrf.dll" Pack="true" PackagePath="runtimes/win/native/" />
-    <Content Include="libusb-1.0.dll" Pack="true" PackagePath="runtimes/win/native/" />
-    <Content Include="pthreadVC2.dll" Pack="true" PackagePath="runtimes/win/native/" />
+    <Content Include="hackrf.dll" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="runtimes/win/native/" />
+    <Content Include="libusb-1.0.dll" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="runtimes/win/native/" />
+    <Content Include="pthreadVC2.dll" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="runtimes/win/native/" />
   </ItemGroup>
 
   <ItemGroup>
