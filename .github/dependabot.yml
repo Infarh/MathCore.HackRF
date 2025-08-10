@@ -1,10 +1,33 @@
-version: 2
+﻿version: 2
 updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "daily"
+    open-pull-requests-limit: 5 # Максимум 5 открытых PR
+    commit-message:
+      prefix: "ci"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    groups:
+      actions:
+        patterns:
+          - "*"
   - package-ecosystem: "nuget"
     directory: "/"
     schedule:
       interval: "daily"
+    open-pull-requests-limit: 5 # Максимум 5 открытых PR
+    commit-message:
+      prefix: "deps"
+    labels:
+      - "dependencies"
+      - "nuget"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"] # Игнорировать major-обновления
+    groups:
+      nuget-packages:
+        patterns:
+          - "*"
