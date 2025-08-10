@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using MathCore.HackRF.Infrastructure.Extensions;
 
 namespace MathCore.HackRF;
 
@@ -18,12 +19,12 @@ public partial class Device
 
             Mode = TransceiverMode.TX;
 
-            var err = HackRFLib.StartTx(DevicePtr, TxCallback);
-            if (err != HackRfError.Success)
+            var error = HackRFLib.StartTx(DevicePtr, TxCallback);
+            if (error != HackRfError.Success)
             {
                 Mode = TransceiverMode.OFF;
                 throw new InvalidOperationException("Ошибка запуска передачи")
-                    .WithData(nameof(err), err);
+                    .WithData(nameof(error), error);
             }
 
             Trace.TraceInformation($"HackRF sn:{SerialNumber} ptr:{DevicePtr:x} переведён в режим передачи");
@@ -32,9 +33,7 @@ public partial class Device
 
     /// <summary>Останавливает режим передачи данных на устройстве HackRF</summary>
     /// <remarks>Если устройство не находится в режиме передачи, метод ничего не делает</remarks>
-    /// <exception cref="InvalidOperationException">
-    /// <para>Выбрасывается, если произошла ошибка при остановке передачи</para>
-    /// </exception>
+    /// <exception cref="InvalidOperationException">Выбрасывается, если произошла ошибка при остановке передачи</exception>
     public void StopTX()
     {
         lock (_SyncRoot)
@@ -42,12 +41,12 @@ public partial class Device
             ThrowIfDisposed();
             if (Mode != TransceiverMode.TX) return; // Если не в режиме передачи — ничего не делаем
 
-            var err = HackRFLib.StopTx(DevicePtr);
-            if (err != HackRfError.Success)
+            var error = HackRFLib.StopTx(DevicePtr);
+            if (error != HackRfError.Success)
             {
                 Mode = TransceiverMode.OFF;
                 throw new InvalidOperationException("Ошибка остановки передачи")
-                    .WithData(nameof(err), err);
+                    .WithData(nameof(error), error);
             }
 
             Mode = TransceiverMode.OFF;
@@ -69,12 +68,12 @@ public partial class Device
 
             Mode = TransceiverMode.RX;
 
-            var err = HackRFLib.StartRx(DevicePtr, RxCallback);
-            if (err != HackRfError.Success)
+            var error = HackRFLib.StartRx(DevicePtr, RxCallback);
+            if (error != HackRfError.Success)
             {
                 Mode = TransceiverMode.OFF;
                 throw new InvalidOperationException("Ошибка запуска приёма")
-                    .WithData(nameof(err), err);
+                    .WithData(nameof(error), error);
             }
 
             Trace.TraceInformation($"HackRF sn:{SerialNumber} ptr:{DevicePtr:x} переведён в режим приёма");
@@ -83,9 +82,7 @@ public partial class Device
 
     /// <summary>Останавливает режим приёма данных на устройстве HackRF</summary>
     /// <remarks>Если устройство не находится в режиме приёма, метод ничего не делает</remarks>
-    /// <exception cref="InvalidOperationException">
-    /// <para>Выбрасывается, если произошла ошибка при остановке приёма</para>
-    /// </exception>
+    /// <exception cref="InvalidOperationException">Выбрасывается, если произошла ошибка при остановке приёма</exception>
     public void StopRX()
     {
         lock (_SyncRoot)
@@ -94,12 +91,12 @@ public partial class Device
 
             if (Mode != TransceiverMode.RX) return; // Если не в режиме приёма — ничего не делаем
 
-            var err = HackRFLib.StopRx(DevicePtr);
-            if (err != HackRfError.Success)
+            var error = HackRFLib.StopRx(DevicePtr);
+            if (error != HackRfError.Success)
             {
                 Mode = TransceiverMode.OFF;
                 throw new InvalidOperationException("Ошибка остановки приёма")
-                    .WithData(nameof(err), err);
+                    .WithData(nameof(error), error);
             }
 
             Mode = TransceiverMode.OFF;
