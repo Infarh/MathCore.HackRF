@@ -57,4 +57,10 @@
     <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Content Include="hackrf.dll" Pack="true" PackagePath="runtimes/win/native/" />
+    <Content Include="libusb-1.0.dll" Pack="true" PackagePath="runtimes/win/native/" />
+    <Content Include="pthreadVC2.dll" Pack="true" PackagePath="runtimes/win/native/" />
+  </ItemGroup>
+
 </Project>
