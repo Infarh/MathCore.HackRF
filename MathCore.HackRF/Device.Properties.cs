@@ -2,26 +2,31 @@
 
 public partial class Device
 {
-    /// <summary>Режим работы устройства.</summary>
+    /// <summary>Режим работы устройства</summary>
     private volatile TransceiverMode _Mode = TransceiverMode.OFF;
 
-    /// <summary>Режим работы устройства.</summary>
+    /// <summary>Режим работы устройства</summary>
     public TransceiverMode Mode { get => _Mode; internal set => _Mode = value; }
 
-    /// <summary>Текущая центральная частота (Гц).</summary>
+    /// <summary>Текущая центральная частота (Гц)</summary>
     public ulong Frequency
     {
         get { lock (_SyncRoot) return field; }
         set
         {
+            if (value is < 1_000_000 or > 6_000_000_000)
+                throw new ArgumentOutOfRangeException(nameof(value), value, "Frequency должен быть в диапазоне от 1_000_000 до 6_000_000_000 Гц");
+
             lock (_SyncRoot)
             {
                 if (Equals(field, value)) return;
                 ThrowIfDisposed();
+
                 var err = HackRFLib.SetFreq(DevicePtr, value);
                 if (err != HackRfError.Success) throw new InvalidOperationException($"Ошибка установки частоты: {err}")
                     .WithData(nameof(Frequency), value)
                     .WithData(nameof(err), err);
+
                 field = value;
             }
         }
@@ -37,15 +42,21 @@ public partial class Device
         get;
         set
         {
+            // Проверка диапазона допустимых значений
+            if (value is < 1_750_000 or > 28_000_000)
+                throw new ArgumentOutOfRangeException(nameof(value), value, "FilterBandwidth должен быть в диапазоне от 1_750_000 до 28_000_000 Гц");
+
             lock (_SyncRoot)
             {
                 if (Equals(field, value)) return;
                 ThrowIfDisposed();
+
                 var err = HackRFLib.SetBasebandFilterBandwidth(DevicePtr, value);
                 if (err != HackRfError.Success)
                     throw new InvalidOperationException($"Ошибка установки полосы фильтра: {err}")
                         .WithData(nameof(FilterBandwidth), value)
                         .WithData(nameof(err), err);
+
                 field = value;
             }
         }
@@ -57,15 +68,20 @@ public partial class Device
         get { lock (_SyncRoot) return field; }
         set
         {
+            if (value is < 2_000_000 or > 20_000_000)
+                throw new ArgumentOutOfRangeException(nameof(value), value, "SampleRate должен быть в диапазоне от 2_000_000 до 20_000_000 Гц");
+
             lock (_SyncRoot)
             {
                 if (Equals(field, value)) return;
                 ThrowIfDisposed();
+
                 var err = HackRFLib.SetSampleRate(DevicePtr, value);
                 if (err != HackRfError.Success)
                     throw new InvalidOperationException($"Ошибка установки частоты дискретизации: {err}")
                         .WithData(nameof(SampleRate), value)
                         .WithData(nameof(err), err);
+
                 field = value;
             }
         }
@@ -77,15 +93,20 @@ public partial class Device
         get;
         set
         {
+            if (value > 40)
+                throw new ArgumentOutOfRangeException(nameof(value), value, "LnaGain должен быть в диапазоне от 0 до 40 дБ");
+
             lock (_SyncRoot)
             {
                 if (Equals(field, value)) return;
                 ThrowIfDisposed();
+
                 var err = HackRFLib.SetLnaGain(DevicePtr, value);
                 if (err != HackRfError.Success)
                     throw new InvalidOperationException($"Ошибка установки LNA Gain: {err}")
                         .WithData(nameof(LnaGain), value)
                         .WithData(nameof(err), err);
+
                 field = value;
             }
         }
@@ -97,15 +118,21 @@ public partial class Device
         get { lock (_SyncRoot) return field; }
         set
         {
+            // Проверка диапазона допустимых значений
+            if (value > 62)
+                throw new ArgumentOutOfRangeException(nameof(value), value, "VgaGain должен быть в диапазоне от 0 до 62 дБ");
+
             lock (_SyncRoot)
             {
                 if (Equals(field, value)) return;
                 ThrowIfDisposed();
+
                 var err = HackRFLib.SetVgaGain(DevicePtr, value);
                 if (err != HackRfError.Success)
                     throw new InvalidOperationException($"Ошибка установки VGA Gain: {err}")
                         .WithData(nameof(VgaGain), value)
                         .WithData(nameof(err), err);
+
                 field = value;
             }
         }
@@ -117,25 +144,27 @@ public partial class Device
         get { lock (_SyncRoot) return field; }
         set
         {
-            if (value is < 0 or > 47)
-                throw new ArgumentOutOfRangeException(nameof(value), "TX VGA Gain должен быть в диапазоне от 0 до 47 дБ");
+            if (value > 47)
+                throw new ArgumentOutOfRangeException(nameof(value), value, "TX VGA Gain должен быть в диапазоне от 0 до 47 дБ");
 
             lock (_SyncRoot)
             {
                 if (Equals(field, value)) return;
                 ThrowIfDisposed();
+
                 var err = HackRFLib.SetTxVgaGain(DevicePtr, value);
                 if (err != HackRfError.Success)
                     throw new InvalidOperationException($"Ошибка установки TX VGA Gain: {err}")
                         .WithData(nameof(TxVgaGain), value)
                         .WithData(nameof(err), err);
+
                 field = value;
             }
         }
     }
 
-    /// <summary>Включение/выключение питания антенны.</summary>
-    public bool AntennaPowerSupliEnable
+    /// <summary>Включение/выключение питания антенны</summary>
+    public bool AntennaPowerSupplyEnable
     {
         get { lock (_SyncRoot) return field; }
         set
@@ -144,17 +173,19 @@ public partial class Device
             {
                 if (Equals(field, value)) return;
                 ThrowIfDisposed();
-                var err = HackRFLib.SetAntennaPowerSupliEnable(DevicePtr, value);
+
+                var err = HackRFLib.SetAntennaPowerSuplyEnable(DevicePtr, value);
                 if (err != HackRfError.Success)
                     throw new InvalidOperationException($"Ошибка управления антенной: {err}")
-                        .WithData(nameof(AntennaPowerSupliEnable), value)
+                        .WithData(nameof(AntennaPowerSupplyEnable), value)
                         .WithData(nameof(err), err);
+
                 field = value;
             }
         }
     }
 
-    /// <summary>Включение/выключение LNA усилителя.</summary>
+    /// <summary>Включение/выключение LNA усилителя</summary>
     public bool EnableLNA
     {
         get { lock (_SyncRoot) return field; }
@@ -164,11 +195,13 @@ public partial class Device
             {
                 if (Equals(field, value)) return;
                 ThrowIfDisposed();
+
                 var err = HackRFLib.SetLnaEnable(DevicePtr, value);
                 if (err != HackRfError.Success)
                     throw new InvalidOperationException($"Ошибка управления LNA Amp: {err}")
                         .WithData(nameof(EnableLNA), value)
                         .WithData(nameof(err), err);
+
                 field = value;
             }
         }
