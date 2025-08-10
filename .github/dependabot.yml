@@ -4,31 +4,8 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
-    # open-pull-requests-limit: 5
-    # commit-message:
-    #   prefix: "ci"
-    # labels:
-    #   - "dependencies"
-    #   - "github-actions"
-    # groups:
-    #   actions:
-    #     patterns:
-    #       - "*"
 
   - package-ecosystem: "nuget"
     directory: "/"
     schedule:
       interval: "daily"
-    # open-pull-requests-limit: 5
-    # commit-message:
-    #   prefix: "deps"
-    # labels:
-    #   - "dependencies"
-    #   - "nuget"
-    # ignore:
-    #   - dependency-name: "*"
-    #     update-types: ["version-update:semver-major"]
-    # groups:
-    #   nuget-packages:
-    #     patterns:
-    #       - "*"
