@@ -157,7 +157,7 @@ public static class HackRFLib
     /// Такой функционал востребован в сценариях, когда к устройству подключаются разные типы антенн, либо требуется временно отключить антенну для тестирования или защиты оборудования.
     /// </remarks>
     [DllImport(__DllName, EntryPoint = "hackrf_set_antenna_enable")]
-    public static extern HackRfError SetAntennaPowerSupliEnable(nint device, [MarshalAs(UnmanagedType.U1)] bool value);
+    public static extern HackRfError SetAntennaPowerSuplyEnable(nint device, [MarshalAs(UnmanagedType.U1)] bool value);
 
     /// <summary>Читает идентификатор платы</summary>
     /// <param name="device">Указатель на устройство</param>
