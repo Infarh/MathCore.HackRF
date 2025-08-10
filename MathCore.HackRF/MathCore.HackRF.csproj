@@ -18,7 +18,7 @@
 
   <PropertyGroup>
     <Title>MathCore.HackRF</Title>
-    <Summary>Краткое описание пакета (замените на актуальное)</Summary>
+    <Summary>Высокоуровневая C# библиотека для управления SDR-устройством HackRF One</Summary>
     <Owners>Шмачилин Павел</Owners>
     <!--<PackageIcon>icon.png</PackageIcon>-->
     <PackageReadmeFile>README.md</PackageReadmeFile>
@@ -61,5 +61,9 @@
     <Content Include="libusb-1.0.dll" Pack="true" PackagePath="runtimes/win/native/" />
     <Content Include="pthreadVC2.dll" Pack="true" PackagePath="runtimes/win/native/" />
   </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="" />
+   </ItemGroup>
 
 </Project>
