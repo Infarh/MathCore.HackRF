@@ -1,4 +1,4 @@
-﻿name: Publish NuGet.org
+name: Publish NuGet.org
 
 on:
   push:
@@ -35,7 +35,7 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
           
       - name: Cache NuGet  
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
