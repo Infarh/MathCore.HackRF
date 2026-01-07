@@ -1,4 +1,4 @@
-﻿name: Publish NuGet.org
+name: Publish NuGet.org
 
 on:
   push:
@@ -25,7 +25,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
