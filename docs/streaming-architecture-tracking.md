@@ -27,6 +27,10 @@ P2:
 - Нет удобного composable API для DSP-конвейеров
 
 ## Сделано в этой сессии
+- Внедрён новый high-level API `Device.StartRxSession(...)` для безопасного потокового приёма
+- Добавлен `DeviceRxSession` с bounded-очередью (Channel) между callback и обработчиком
+- Добавлена телеметрия сессии (`RxSessionStatistics`): received/dropped/processed, bytes, queue length, last/max processing time
+- Горячий путь обработки переводится через `ReadOnlySpan<byte>` в пользовательский процессор
 - Миграция всех проектов решения на .NET 10.0 (библиотека, unit-тесты, console-тесты)
 - Обновление требований .NET в README репозитория и README пакета
 - Успешная сборка решения после миграции (net10.0)
@@ -39,10 +43,11 @@ P2:
 ## Целевая модель (этапы)
 
 ### Этап 1. Слой безопасного транспорта
-- Ввести StreamSession для жизненного цикла RX/TX
-- Ввести буферные политики: RingBufferPool + фиксированный размер блока (8192)
-- Ввести StreamStats (dropped blocks, avg/max processing time, jitter)
-- Добавить CancellationToken и контролируемую остановку
+- Частично выполнено: реализован `DeviceRxSession` для RX
+- В работе: вынесение общего `StreamSession` для RX/TX
+- В работе: буферные политики (сейчас `DropNewest`, далее `DropOldest`/ring-buffer)
+- Частично выполнено: `RxSessionStatistics`
+- Частично выполнено: контролируемая остановка через `Dispose`
 
 ### Этап 2. Конвейер обработки
 - Ввести интерфейсы:
