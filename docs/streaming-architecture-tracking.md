@@ -27,6 +27,9 @@ P2:
 - Нет удобного composable API для DSP-конвейеров
 
 ## Сделано в этой сессии
+- Добавлен режим `--mode switch` (быстрое чередование RX -> TX на одном устройстве)
+- В сценарии `switch`: захват IQ, расчёт средней мощности, передача обратно захваченного сигнала
+- Исправлены TX-метрики: `underrun` не считается при успешном producer, producer-блоки учитываются в `dequeued`
 - Консольный тест расширен режимами `--mode rx|tx`
 - Добавлен TX стресс-сценарий на одном устройстве (очередь + feeder + метрики underrun)
 - Добавлена overflow-политика `DropOldest` для RX очереди
@@ -122,6 +125,12 @@ P2:
 - RX базовый: `dotnet run --project .\\Tests\\MathCore.HackRF.ConsoleTests\\MathCore.HackRF.ConsoleTests.csproj -c Debug -- --mode rx --seconds 5`
 - RX стресс: `dotnet run --project .\\Tests\\MathCore.HackRF.ConsoleTests\\MathCore.HackRF.ConsoleTests.csproj -c Debug -- --mode rx --seconds 5 --processing-delay-ms 20 --queue 16 --drop-oldest`
 - TX стресс: `dotnet run --project .\\Tests\\MathCore.HackRF.ConsoleTests\\MathCore.HackRF.ConsoleTests.csproj -c Debug -- --mode tx --seconds 5 --queue 16 --tx-feed-delay-ms 20 --tx-vga 0`
+- RX/TX switch: `dotnet run --project .\\Tests\\MathCore.HackRF.ConsoleTests\\MathCore.HackRF.ConsoleTests.csproj -c Debug -- --mode switch --cycles 5 --rx-ms 300 --tx-ms 300 --queue 64 --max-capture-blocks 128 --tx-vga 0`
+
+## Аппаратная проверка (RX/TX switch)
+- Сценарий: `--mode switch --cycles 3 --rx-ms 300 --tx-ms 300 --queue 64 --max-capture-blocks 128 --tx-vga 0`
+- Результат: по циклам стабильно `RX recv=23/proc=23/drop=0`, `TX dequeued=23/underrun=0`
+- Вывод: быстрые переключения RX->TX отрабатывают штатно, capture-and-replay работает, базовые проблемы переключения в этом профиле не воспроизводятся
 
 ## Как восстановить контекст на другой машине
 1. Открыть эту ветку и файл docs/streaming-architecture-tracking.md
