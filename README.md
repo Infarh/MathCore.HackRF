@@ -1,6 +1,6 @@
 ﻿# MathCore.HackRF
 
-[![.NET](https://img.shields.io/badge/.NET-9%20|%208-blue.svg)](https://dotnet.microsoft.com/)
+[![.NET](https://img.shields.io/badge/.NET-10-blue.svg)](https://dotnet.microsoft.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![NuGet](https://img.shields.io/nuget/v/MathCore.HackRF.svg)](https://www.nuget.org/packages/MathCore.HackRF/)
 
@@ -17,7 +17,7 @@ C# библиотека для управления SDR-устройством H
 
 ## 📋 Системные требования
 
-- .NET 8.0 или .NET 9.0
+- .NET 10.0
 - Windows x64
 - HackRF One или совместимое устройство
 - Установленные драйверы HackRF
@@ -42,7 +42,7 @@ MathCore.HackRF/
 ### Требования для разработки
 
 - Visual Studio 2022 или JetBrains Rider
-- .NET SDK 9.0
+- .NET SDK 10.0
 - Git
 
 ### Команды сборки

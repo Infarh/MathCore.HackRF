@@ -5,6 +5,9 @@ namespace MathCore.HackRF;
 
 public partial class Device
 {
+    private HackRfDelegate? _RxCallback;
+    private HackRfDelegate? _TxCallback;
+
     /// <summary>Запускает режим передачи на устройстве HackRF</summary>
     /// <param name="TxCallback">Делегат обратного вызова для передачи данных</param>
     /// <exception cref="InvalidOperationException">Выбрасывается, если устройство уже находится в режиме передачи</exception>
@@ -14,15 +17,17 @@ public partial class Device
         lock (_SyncRoot)
         {
             ThrowIfDisposed();
-            if (Mode == TransceiverMode.TX)
-                throw new InvalidOperationException("Устройство уже в режиме передачи");
+            if (Mode != TransceiverMode.OFF)
+                throw new InvalidOperationException($"Устройство уже в режиме {Mode}");
 
             Mode = TransceiverMode.TX;
+            _TxCallback = TxCallback;
 
-            var error = HackRFLib.StartTx(DevicePtr, TxCallback);
+            var error = HackRFLib.StartTx(DevicePtr, _TxCallback);
             if (error != HackRfError.Success)
             {
                 Mode = TransceiverMode.OFF;
+                _TxCallback = null;
                 throw new InvalidOperationException("Ошибка запуска передачи")
                     .WithData(nameof(error), error);
             }
@@ -42,14 +47,16 @@ public partial class Device
             if (Mode != TransceiverMode.TX) return; // Если не в режиме передачи — ничего не делаем
 
             var error = HackRFLib.StopTx(DevicePtr);
-            if (error != HackRfError.Success)
+            if (error is not (HackRfError.Success or HackRfError.StreamingStopped or HackRfError.StreamingExitCalled))
             {
                 Mode = TransceiverMode.OFF;
+                _TxCallback = null;
                 throw new InvalidOperationException("Ошибка остановки передачи")
                     .WithData(nameof(error), error);
             }
 
             Mode = TransceiverMode.OFF;
+            _TxCallback = null;
             Trace.TraceInformation($"HackRF sn:{SerialNumber} ptr:{DevicePtr:x} остановлен режим передачи");
         }
     }
@@ -63,15 +70,17 @@ public partial class Device
         lock (_SyncRoot)
         {
             ThrowIfDisposed();
-            if (Mode == TransceiverMode.RX)
-                throw new InvalidOperationException("Устройство уже в режиме приёма");
+            if (Mode != TransceiverMode.OFF)
+                throw new InvalidOperationException($"Устройство уже в режиме {Mode}");
 
             Mode = TransceiverMode.RX;
+            _RxCallback = RxCallback;
 
-            var error = HackRFLib.StartRx(DevicePtr, RxCallback);
+            var error = HackRFLib.StartRx(DevicePtr, _RxCallback);
             if (error != HackRfError.Success)
             {
                 Mode = TransceiverMode.OFF;
+                _RxCallback = null;
                 throw new InvalidOperationException("Ошибка запуска приёма")
                     .WithData(nameof(error), error);
             }
@@ -92,14 +101,16 @@ public partial class Device
             if (Mode != TransceiverMode.RX) return; // Если не в режиме приёма — ничего не делаем
 
             var error = HackRFLib.StopRx(DevicePtr);
-            if (error != HackRfError.Success)
+            if (error is not (HackRfError.Success or HackRfError.StreamingStopped or HackRfError.StreamingExitCalled))
             {
                 Mode = TransceiverMode.OFF;
+                _RxCallback = null;
                 throw new InvalidOperationException("Ошибка остановки приёма")
                     .WithData(nameof(error), error);
             }
 
             Mode = TransceiverMode.OFF;
+            _RxCallback = null;
             Trace.TraceInformation($"HackRF sn:{SerialNumber} ptr:{DevicePtr:x} остановлен режим приёма");
         }
     }
