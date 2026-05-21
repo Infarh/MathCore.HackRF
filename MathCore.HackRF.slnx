@@ -1,0 +1,23 @@
+<Solution>
+  <Folder Name="/.Service/">
+    <File Path=".gitignore" />
+    <File Path="clear-cache.bat" />
+    <File Path="clear-obj.bat" />
+    <File Path="clear.bat" />
+    <File Path="LICENSE.txt" />
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/.Service/.github/">
+    <File Path=".github/copilot-instructions.md" />
+    <File Path=".github/dependabot.yml" />
+  </Folder>
+  <Folder Name="/.Service/.github/workflows/">
+    <File Path=".github/workflows/publish.yml" />
+    <File Path=".github/workflows/testing.yml" />
+  </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="Tests/MathCore.HackRF.ConsoleTests/MathCore.HackRF.ConsoleTests.csproj" />
+    <Project Path="Tests/MathCore.HackRFTests/MathCore.HackRFTests.csproj" />
+  </Folder>
+  <Project Path="MathCore.HackRF/MathCore.HackRF.csproj" />
+</Solution>
