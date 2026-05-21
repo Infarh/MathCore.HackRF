@@ -1,5 +1,6 @@
 ﻿using MathCore.HackRF;
 using MathCore.HackRF.Streaming;
+using System.Numerics;
 
 Console.WriteLine("Инициализация HackRF...");
 
@@ -18,8 +19,17 @@ var switch_cycles = GetIntArg(cmd_args, "--cycles", 5);
 var switch_rx_ms = GetIntArg(cmd_args, "--rx-ms", 400);
 var switch_tx_ms = GetIntArg(cmd_args, "--tx-ms", 400);
 var switch_max_capture_blocks = GetIntArg(cmd_args, "--max-capture-blocks", 256);
+var scan_start_mhz = GetDoubleArg(cmd_args, "--f-start-mhz", 70);
+var scan_stop_mhz = GetDoubleArg(cmd_args, "--f-stop-mhz", 110);
+var scan_step_mhz = GetDoubleArg(cmd_args, "--f-step-mhz", 2);
+var scan_bin_khz = GetDoubleArg(cmd_args, "--f-bin-khz", 25);
+var scan_threshold_db = GetDoubleArg(cmd_args, "--f-threshold-db", 12);
+var scan_blocks_per_center = GetIntArg(cmd_args, "--f-blocks", 8);
+var scan_lna = (uint)Math.Max(0, GetIntArg(cmd_args, "--f-lna", 32));
+var scan_vga = (uint)Math.Max(0, GetIntArg(cmd_args, "--f-vga", 16));
+var scan_dc_reject_khz = GetDoubleArg(cmd_args, "--f-dc-reject-khz", 250);
 
-Console.WriteLine($"Параметры теста: mode={mode}, seconds={run_seconds}, processing-delay-ms={processing_delay_ms}, queue={queue_capacity}, overflow={overflow_policy}, tx-use-producer={tx_use_producer}, tx-feed-delay-ms={tx_feed_delay_ms}, tx-block-bytes={tx_block_bytes}, tx-vga={tx_vga_gain}, cycles={switch_cycles}, rx-ms={switch_rx_ms}, tx-ms={switch_tx_ms}, max-capture-blocks={switch_max_capture_blocks}");
+Console.WriteLine($"Параметры теста: mode={mode}, seconds={run_seconds}, processing-delay-ms={processing_delay_ms}, queue={queue_capacity}, overflow={overflow_policy}, tx-use-producer={tx_use_producer}, tx-feed-delay-ms={tx_feed_delay_ms}, tx-block-bytes={tx_block_bytes}, tx-vga={tx_vga_gain}, cycles={switch_cycles}, rx-ms={switch_rx_ms}, tx-ms={switch_tx_ms}, max-capture-blocks={switch_max_capture_blocks}, f-start-mhz={scan_start_mhz}, f-stop-mhz={scan_stop_mhz}, f-step-mhz={scan_step_mhz}, f-bin-khz={scan_bin_khz}, f-threshold-db={scan_threshold_db}, f-blocks={scan_blocks_per_center}, f-lna={scan_lna}, f-vga={scan_vga}, f-dc-reject-khz={scan_dc_reject_khz}");
 
 // Инициализируем библиотеку
 Device.Initialize();
@@ -49,9 +59,25 @@ try
     {
         await RunRxTxSwitchScenario(device, switch_cycles, switch_rx_ms, switch_tx_ms, queue_capacity, overflow_policy, switch_max_capture_blocks, tx_vga_gain);
     }
+    else if (mode is "fmscan" or "fm")
+    {
+        await RunFmScanScenario(
+            device,
+            scan_start_mhz,
+            scan_stop_mhz,
+            scan_step_mhz,
+            scan_bin_khz,
+            scan_threshold_db,
+            scan_blocks_per_center,
+            scan_lna,
+            scan_vga,
+            scan_dc_reject_khz,
+            queue_capacity,
+            overflow_policy);
+    }
     else
     {
-        throw new ArgumentOutOfRangeException(nameof(mode), mode, "Поддерживаемые режимы: rx, tx, switch");
+        throw new ArgumentOutOfRangeException(nameof(mode), mode, "Поддерживаемые режимы: rx, tx, switch, fmscan");
     }
 }
 catch (Exception ex)
@@ -81,6 +107,16 @@ static string GetStringArg(string[] Args, string Name, string DefaultValue)
     for (var i = 0; i < Args.Length - 1; i++)
         if (string.Equals(Args[i], Name, StringComparison.OrdinalIgnoreCase))
             return Args[i + 1];
+
+    return DefaultValue;
+}
+
+static double GetDoubleArg(string[] Args, string Name, double DefaultValue)
+{
+    for (var i = 0; i < Args.Length - 1; i++)
+        if (string.Equals(Args[i], Name, StringComparison.OrdinalIgnoreCase)
+            && double.TryParse(Args[i + 1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var value))
+            return value;
 
     return DefaultValue;
 }
@@ -247,6 +283,255 @@ static void FillTone(Span<byte> Buffer, ref double Phase)
         if (Phase > 2 * Math.PI)
             Phase -= 2 * Math.PI;
     }
+}
+
+static async Task RunFmScanScenario(
+    Device Device,
+    double StartMHz,
+    double StopMHz,
+    double StepMHz,
+    double BinKHz,
+    double ThresholdDb,
+    int BlocksPerCenter,
+    uint LnaGain,
+    uint VgaGain,
+    double DcRejectKHz,
+    int QueueCapacity,
+    RxQueueOverflowPolicy OverflowPolicy)
+{
+    const double sample_rate_hz = 10_000_000;
+    const int fft_size = 4096;
+
+    var start_hz = StartMHz * 1_000_000;
+    var stop_hz = StopMHz * 1_000_000;
+    var step_hz = StepMHz * 1_000_000;
+    var bin_hz = BinKHz * 1_000;
+    var dc_reject_hz = DcRejectKHz * 1_000;
+
+    if (start_hz >= stop_hz)
+        throw new ArgumentOutOfRangeException(nameof(StartMHz), "Начальная частота должна быть меньше конечной");
+    if (step_hz <= 0)
+        throw new ArgumentOutOfRangeException(nameof(StepMHz), "Шаг сканирования должен быть больше нуля");
+    if (bin_hz <= 0)
+        throw new ArgumentOutOfRangeException(nameof(BinKHz), "Шаг частотной сетки должен быть больше нуля");
+
+    Device.SampleRate = sample_rate_hz;
+    Device.FilterBandwidth = 10_000_000;
+    Device.LnaGain = LnaGain;
+    Device.VgaGain = VgaGain;
+    Device.EnableLNA = true;
+
+    Console.WriteLine($"FM scan: {StartMHz:F1}-{StopMHz:F1} МГц, Fs=10 МГц, step={StepMHz:F2} МГц, bin={BinKHz:F1} кГц");
+    Console.WriteLine($"Усиления: LNA={Device.LnaGain} дБ, VGA={Device.VgaGain} дБ");
+
+    var bins_count = (int)Math.Floor((stop_hz - start_hz) / bin_hz) + 1;
+    var power_sum = new double[bins_count];
+    var power_count = new int[bins_count];
+    var window = BuildHannWindow(fft_size);
+
+    for (var center_hz = start_hz; center_hz <= stop_hz; center_hz += step_hz)
+    {
+        Device.Frequency = (ulong)Math.Round(center_hz);
+
+        var processed_blocks = 0;
+        using var blocks_done = new ManualResetEventSlim(false);
+
+        using var rx_session = Device.StartRxSession((rx_block, in metadata) =>
+        {
+            ProcessSpectrumBlock(rx_block, fft_size, center_hz, sample_rate_hz, start_hz, stop_hz, bin_hz, dc_reject_hz, window, power_sum, power_count);
+
+            if (Interlocked.Increment(ref processed_blocks) >= BlocksPerCenter)
+                blocks_done.Set();
+        }, new RxSessionOptions
+        {
+            QueueCapacity = Math.Max(32, QueueCapacity),
+            OverflowPolicy = OverflowPolicy,
+            OnProcessingError = error => Console.WriteLine($"Ошибка обработки блока спектра: {error.Message}")
+        });
+
+        _ = blocks_done.Wait(TimeSpan.FromSeconds(2));
+
+        var stats = rx_session.GetStatistics();
+        Console.WriteLine($"center={center_hz / 1_000_000:F2} МГц | blocks={stats.ProcessedBlocks:N0} drop={stats.DroppedBlocks:N0}");
+    }
+
+    var power_db = new double[bins_count];
+    for (var i = 0; i < bins_count; i++)
+    {
+        if (power_count[i] <= 0)
+        {
+            power_db[i] = double.NegativeInfinity;
+            continue;
+        }
+
+        var avg = power_sum[i] / power_count[i];
+        power_db[i] = 10 * Math.Log10(avg + 1e-20);
+    }
+
+    var finite_values = power_db.Where(double.IsFinite).OrderBy(v => v).ToArray();
+    if (finite_values.Length == 0)
+    {
+        Console.WriteLine("Не удалось собрать спектральные данные");
+        return;
+    }
+
+    var noise_floor = finite_values[finite_values.Length / 2];
+    var detected = DetectStationFrequencies(power_db, start_hz, bin_hz, noise_floor + ThresholdDb);
+
+    Console.WriteLine();
+    Console.WriteLine($"Шумовой порог (median): {noise_floor:N2} dB");
+    Console.WriteLine($"Порог детекции: {noise_floor + ThresholdDb:N2} dB");
+
+    if (detected.Count == 0)
+    {
+        Console.WriteLine("FM станции не обнаружены");
+        return;
+    }
+
+    Console.WriteLine("Найденные FM станции:");
+    foreach (var (frequency_hz, power_level_db) in detected)
+        Console.WriteLine($"  {frequency_hz / 1_000_000:N3} МГц | level={power_level_db:N2} dB");
+}
+
+static double[] BuildHannWindow(int Size)
+{
+    var result = new double[Size];
+    for (var i = 0; i < Size; i++)
+        result[i] = 0.5 * (1 - Math.Cos(2 * Math.PI * i / (Size - 1)));
+    return result;
+}
+
+static void ProcessSpectrumBlock(
+    ReadOnlySpan<byte> RxBlock,
+    int FftSize,
+    double CenterHz,
+    double SampleRateHz,
+    double StartHz,
+    double StopHz,
+    double BinHz,
+    double DcRejectHz,
+    double[] Window,
+    double[] PowerSum,
+    int[] PowerCount)
+{
+    var iq_count = Math.Min(FftSize, RxBlock.Length / 2);
+    if (iq_count < 256) return;
+
+    var spectrum = new Complex[FftSize];
+    for (var i = 0; i < iq_count; i++)
+    {
+        var i_sample = (sbyte)RxBlock[i * 2] / 128.0;
+        var q_sample = (sbyte)RxBlock[i * 2 + 1] / 128.0;
+        spectrum[i] = new Complex(i_sample * Window[i], q_sample * Window[i]);
+    }
+
+    for (var i = iq_count; i < FftSize; i++)
+        spectrum[i] = Complex.Zero;
+
+    FftInPlace(spectrum);
+
+    for (var k = 0; k < FftSize; k++)
+    {
+        var freq_offset = (k < FftSize / 2 ? k : k - FftSize) * SampleRateHz / FftSize;
+        if (Math.Abs(freq_offset) < DcRejectHz) continue; // Подавление DC/LO артефакта
+        var absolute_hz = CenterHz + freq_offset;
+
+        if (absolute_hz < StartHz || absolute_hz > StopHz) continue;
+
+        var bin_index = (int)Math.Round((absolute_hz - StartHz) / BinHz);
+        if ((uint)bin_index >= (uint)PowerSum.Length) continue;
+
+        var mag2 = spectrum[k].Magnitude * spectrum[k].Magnitude;
+        PowerSum[bin_index] += mag2;
+        PowerCount[bin_index]++;
+    }
+}
+
+static void FftInPlace(Complex[] Buffer)
+{
+    var n = Buffer.Length;
+    var bits = (int)Math.Log2(n);
+
+    for (var i = 0; i < n; i++)
+    {
+        var j = ReverseBits(i, bits);
+        if (j <= i) continue;
+        (Buffer[i], Buffer[j]) = (Buffer[j], Buffer[i]);
+    }
+
+    for (var len = 2; len <= n; len <<= 1)
+    {
+        var half_len = len >> 1;
+        var theta = -2 * Math.PI / len;
+        var w_len = new Complex(Math.Cos(theta), Math.Sin(theta));
+
+        for (var i = 0; i < n; i += len)
+        {
+            var w = Complex.One;
+            for (var j = 0; j < half_len; j++)
+            {
+                var u = Buffer[i + j];
+                var v = Buffer[i + j + half_len] * w;
+                Buffer[i + j] = u + v;
+                Buffer[i + j + half_len] = u - v;
+                w *= w_len;
+            }
+        }
+    }
+}
+
+static int ReverseBits(int Value, int Bits)
+{
+    var result = 0;
+    for (var i = 0; i < Bits; i++)
+    {
+        result = (result << 1) | (Value & 1);
+        Value >>= 1;
+    }
+
+    return result;
+}
+
+static List<(double FrequencyHz, double PowerDb)> DetectStationFrequencies(double[] PowerDb, double StartHz, double BinHz, double ThresholdDb)
+{
+    const double merge_distance_hz = 250_000;
+    var candidates = new List<(double FrequencyHz, double PowerDb)>();
+
+    for (var i = 2; i < PowerDb.Length - 2; i++)
+    {
+        var p = PowerDb[i];
+        if (!double.IsFinite(p)) continue;
+        if (p < ThresholdDb) continue;
+
+        if (p >= PowerDb[i - 1] && p >= PowerDb[i + 1] && p >= PowerDb[i - 2] && p >= PowerDb[i + 2])
+        {
+            var f = StartHz + i * BinHz;
+            candidates.Add((f, p));
+        }
+    }
+
+    candidates.Sort((a, b) => a.FrequencyHz.CompareTo(b.FrequencyHz));
+
+    var merged = new List<(double FrequencyHz, double PowerDb)>();
+    foreach (var candidate in candidates)
+    {
+        if (merged.Count == 0)
+        {
+            merged.Add(candidate);
+            continue;
+        }
+
+        var last = merged[^1];
+        if (Math.Abs(candidate.FrequencyHz - last.FrequencyHz) <= merge_distance_hz)
+        {
+            if (candidate.PowerDb > last.PowerDb)
+                merged[^1] = candidate;
+        }
+        else
+            merged.Add(candidate);
+    }
+
+    return merged;
 }
 
 static async Task RunRxTxSwitchScenario(
