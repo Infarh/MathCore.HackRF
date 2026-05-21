@@ -56,6 +56,22 @@ public partial class Device : IDisposable
         {
             if (_Disposed) return;
 
+            var err_stop = HackRfError.Success;
+            if (Mode == TransceiverMode.RX)
+                err_stop = HackRFLib.StopRx(DevicePtr);
+            else if (Mode == TransceiverMode.TX)
+                err_stop = HackRFLib.StopTx(DevicePtr);
+
+            if (err_stop is not (HackRfError.Success or HackRfError.StreamingStopped or HackRfError.StreamingExitCalled))
+                throw new InvalidOperationException($"Ошибка остановки стриминга устройства: {err_stop}")
+                    .WithData(nameof(DevicePtr), DevicePtr)
+                    .WithData(nameof(SerialNumber), SerialNumber ?? "")
+                    .WithData(nameof(err_stop), err_stop)
+                    .WithData(nameof(Mode), Mode);
+
+            Mode = TransceiverMode.OFF;
+            _RxCallback = null;
+            _TxCallback = null;
             _Disposed = true;
             GC.SuppressFinalize(this);
 
