@@ -43,7 +43,7 @@ public sealed class DeviceRxSession : IDisposable
         {
             SingleReader = true,
             SingleWriter = false,
-            FullMode = BoundedChannelFullMode.DropWrite,
+            FullMode = BoundedChannelFullMode.Wait,
             AllowSynchronousContinuations = false
         });
 
@@ -87,12 +87,24 @@ public sealed class DeviceRxSession : IDisposable
             return 0;
         }
 
+        if (_Options.OverflowPolicy == RxQueueOverflowPolicy.DropOldest)
+        {
+            if (_Queue.Reader.TryRead(out var old_block))
+            {
+                ArrayPool<byte>.Shared.Return(old_block.Buffer);
+                Interlocked.Decrement(ref _CurrentQueueLength);
+                Interlocked.Increment(ref _DroppedBlocks);
+            }
+
+            if (_Queue.Writer.TryWrite(queued_block))
+            {
+                Interlocked.Increment(ref _CurrentQueueLength);
+                return 0;
+            }
+        }
+
         ArrayPool<byte>.Shared.Return(buffer);
         Interlocked.Increment(ref _DroppedBlocks);
-
-        if (_Options.OverflowPolicy == RxQueueOverflowPolicy.DropNewest)
-            return 0;
-
         return 0;
     }
 

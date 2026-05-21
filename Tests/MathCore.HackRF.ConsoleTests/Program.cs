@@ -3,6 +3,15 @@ using MathCore.HackRF.Streaming;
 
 Console.WriteLine("Инициализация HackRF...");
 
+var cmd_args = Environment.GetCommandLineArgs();
+var run_seconds = GetIntArg(cmd_args, "--seconds", 5);
+var processing_delay_ms = GetIntArg(cmd_args, "--processing-delay-ms", 0);
+var queue_capacity = GetIntArg(cmd_args, "--queue", 256);
+var use_drop_oldest = cmd_args.Any(a => string.Equals(a, "--drop-oldest", StringComparison.OrdinalIgnoreCase));
+var overflow_policy = use_drop_oldest ? RxQueueOverflowPolicy.DropOldest : RxQueueOverflowPolicy.DropNewest;
+
+Console.WriteLine($"Параметры теста: seconds={run_seconds}, processing-delay-ms={processing_delay_ms}, queue={queue_capacity}, overflow={overflow_policy}");
+
 // Инициализируем библиотеку
 Device.Initialize();
 
@@ -42,6 +51,13 @@ try
     {
         samples_received += rx_block.Length / 2;
 
+        if (processing_delay_ms > 0)
+        {
+            var start_time = DateTime.UtcNow;
+            while ((DateTime.UtcNow - start_time).TotalMilliseconds < processing_delay_ms)
+                Thread.SpinWait(256); // Эмуляция тяжёлой DSP обработки
+        }
+
         for (var i = 0; i + 1 < rx_block.Length; i += 2)
         {
             var i_sample = (sbyte)rx_block[i];
@@ -53,15 +69,16 @@ try
         }
     }, new RxSessionOptions
     {
-        QueueCapacity = 256,
+        QueueCapacity = queue_capacity,
+        OverflowPolicy = overflow_policy,
         OnProcessingError = error => Console.WriteLine($"Ошибка обработки RX блока: {error.Message}")
     });
 
     Console.WriteLine("\nЗапуск приёма данных через DeviceRxSession...");
-    Console.WriteLine("Сбор статистики 5 секунд...");
+    Console.WriteLine($"Сбор статистики {run_seconds} секунд...");
 
     var start_time = DateTime.UtcNow;
-    for (var i = 0; i < 5; i++)
+    for (var i = 0; i < run_seconds; i++)
     {
         await Task.Delay(TimeSpan.FromSeconds(1));
         var stats = rx_session.GetStatistics();
@@ -92,3 +109,12 @@ finally
 }
 
 Console.WriteLine("Конец программы.");
+
+static int GetIntArg(string[] Args, string Name, int DefaultValue)
+{
+    for (var i = 0; i < Args.Length - 1; i++)
+        if (string.Equals(Args[i], Name, StringComparison.OrdinalIgnoreCase) && int.TryParse(Args[i + 1], out var value))
+            return value;
+
+    return DefaultValue;
+}

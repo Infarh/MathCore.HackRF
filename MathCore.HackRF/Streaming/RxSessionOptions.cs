@@ -17,7 +17,10 @@ public sealed class RxSessionOptions
 public enum RxQueueOverflowPolicy : byte
 {
     /// <summary>Новые блоки отбрасываются</summary>
-    DropNewest = 0
+    DropNewest = 0,
+
+    /// <summary>Старые блоки отбрасываются в пользу новых</summary>
+    DropOldest = 1
 }
 
 /// <summary>Снимок статистики сессии приёма</summary>
