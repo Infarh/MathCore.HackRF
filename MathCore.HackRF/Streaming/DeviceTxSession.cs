@@ -101,14 +101,14 @@ public sealed class DeviceTxSession : IDisposable
             return 0;
         }
 
-        Interlocked.Increment(ref _UnderrunBlocks);
-
         try
         {
             if (_Producer is not null)
             {
                 var metadata = new TxBlockMetadata(sequence_id, DateTime.UtcNow, tx_buffer.Length);
                 _Producer(tx_buffer, in metadata);
+                Interlocked.Increment(ref _DequeuedBlocks);
+                Interlocked.Add(ref _DequeuedBytes, tx_buffer.Length);
                 return 0;
             }
         }
@@ -116,6 +116,8 @@ public sealed class DeviceTxSession : IDisposable
         {
             _Options.OnProducerError?.Invoke(error);
         }
+
+        Interlocked.Increment(ref _UnderrunBlocks);
 
         if (_Options.UnderrunPolicy == TxUnderrunPolicy.FillZeros)
             tx_buffer.Clear();

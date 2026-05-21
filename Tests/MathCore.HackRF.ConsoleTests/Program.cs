@@ -14,8 +14,12 @@ var tx_use_producer = cmd_args.Any(a => string.Equals(a, "--tx-use-producer", St
 var tx_feed_delay_ms = GetIntArg(cmd_args, "--tx-feed-delay-ms", 0);
 var tx_block_bytes = GetIntArg(cmd_args, "--tx-block-bytes", HackRFLib.SamplesPerBlock);
 var tx_vga_gain = (uint)Math.Max(0, GetIntArg(cmd_args, "--tx-vga", 0));
+var switch_cycles = GetIntArg(cmd_args, "--cycles", 5);
+var switch_rx_ms = GetIntArg(cmd_args, "--rx-ms", 400);
+var switch_tx_ms = GetIntArg(cmd_args, "--tx-ms", 400);
+var switch_max_capture_blocks = GetIntArg(cmd_args, "--max-capture-blocks", 256);
 
-Console.WriteLine($"Параметры теста: mode={mode}, seconds={run_seconds}, processing-delay-ms={processing_delay_ms}, queue={queue_capacity}, overflow={overflow_policy}, tx-use-producer={tx_use_producer}, tx-feed-delay-ms={tx_feed_delay_ms}, tx-block-bytes={tx_block_bytes}, tx-vga={tx_vga_gain}");
+Console.WriteLine($"Параметры теста: mode={mode}, seconds={run_seconds}, processing-delay-ms={processing_delay_ms}, queue={queue_capacity}, overflow={overflow_policy}, tx-use-producer={tx_use_producer}, tx-feed-delay-ms={tx_feed_delay_ms}, tx-block-bytes={tx_block_bytes}, tx-vga={tx_vga_gain}, cycles={switch_cycles}, rx-ms={switch_rx_ms}, tx-ms={switch_tx_ms}, max-capture-blocks={switch_max_capture_blocks}");
 
 // Инициализируем библиотеку
 Device.Initialize();
@@ -41,9 +45,13 @@ try
     {
         await RunTxScenario(device, run_seconds, queue_capacity, tx_use_producer, tx_feed_delay_ms, tx_block_bytes, tx_vga_gain);
     }
+    else if (mode is "switch" or "rxtx")
+    {
+        await RunRxTxSwitchScenario(device, switch_cycles, switch_rx_ms, switch_tx_ms, queue_capacity, overflow_policy, switch_max_capture_blocks, tx_vga_gain);
+    }
     else
     {
-        throw new ArgumentOutOfRangeException(nameof(mode), mode, "Поддерживаемые режимы: rx, tx");
+        throw new ArgumentOutOfRangeException(nameof(mode), mode, "Поддерживаемые режимы: rx, tx, switch");
     }
 }
 catch (Exception ex)
@@ -239,4 +247,137 @@ static void FillTone(Span<byte> Buffer, ref double Phase)
         if (Phase > 2 * Math.PI)
             Phase -= 2 * Math.PI;
     }
+}
+
+static async Task RunRxTxSwitchScenario(
+    Device Device,
+    int Cycles,
+    int RxMilliseconds,
+    int TxMilliseconds,
+    int QueueCapacity,
+    RxQueueOverflowPolicy OverflowPolicy,
+    int MaxCaptureBlocks,
+    uint TxVgaGain)
+{
+    Device.Frequency = 433_000_000;
+    Device.SampleRate = 10_000_000;
+    Device.FilterBandwidth = 10_000_000;
+    Device.LnaGain = 32;
+    Device.VgaGain = 40;
+    Device.EnableLNA = true;
+    Device.TxVgaGain = TxVgaGain;
+
+    Console.WriteLine($"Частота: {Device.Frequency / 1_000_000:F1} МГц");
+    Console.WriteLine($"Частота дискретизации: {Device.SampleRate / 1_000_000:N1} МГц");
+    Console.WriteLine($"Полоса фильтра: {Device.FilterBandwidth / 1_000_000:N1} МГц");
+    Console.WriteLine($"LNA={Device.LnaGain} дБ, VGA={Device.VgaGain} дБ, TX VGA={Device.TxVgaGain} дБ");
+
+    var total_rx_blocks = 0L;
+    var total_tx_underrun = 0L;
+    var total_rx_drop = 0L;
+    var total_avg_power = 0d;
+
+    Console.WriteLine("\nСтарт цикла быстрого переключения RX -> TX...");
+
+    for (var cycle = 1; cycle <= Cycles; cycle++)
+    {
+        var captured_blocks = new List<byte[]>(Math.Max(16, MaxCaptureBlocks));
+        var capture_lock = new object();
+        var power_sum = 0d;
+        var iq_count = 0L;
+
+        RxSessionStatistics rx_stats;
+
+        using (var rx_session = Device.StartRxSession((rx_block, in metadata) =>
+        {
+            var local_power = 0d;
+            var local_iq_count = 0;
+
+            for (var i = 0; i + 1 < rx_block.Length; i += 2)
+            {
+                var i_sample = (sbyte)rx_block[i];
+                var q_sample = (sbyte)rx_block[i + 1];
+                local_power += i_sample * i_sample + q_sample * q_sample; // Мгновенная мощность IQ
+                local_iq_count++;
+            }
+
+            lock (capture_lock)
+            {
+                power_sum += local_power;
+                iq_count += local_iq_count;
+
+                if (captured_blocks.Count >= MaxCaptureBlocks) return;
+
+                var copy = new byte[rx_block.Length];
+                rx_block.CopyTo(copy);
+                captured_blocks.Add(copy);
+            }
+        }, new RxSessionOptions
+        {
+            QueueCapacity = QueueCapacity,
+            OverflowPolicy = OverflowPolicy,
+            OnProcessingError = error => Console.WriteLine($"Ошибка обработки RX блока: {error.Message}")
+        }))
+        {
+            await Task.Delay(Math.Max(50, RxMilliseconds));
+            rx_stats = rx_session.GetStatistics();
+        }
+
+        var avg_power = iq_count > 0 ? power_sum / iq_count : 0;
+        total_avg_power += avg_power;
+        total_rx_blocks += rx_stats.ReceivedBlocks;
+        total_rx_drop += rx_stats.DroppedBlocks;
+
+        Console.WriteLine($"cycle={cycle} RX | recv={rx_stats.ReceivedBlocks:N0} proc={rx_stats.ProcessedBlocks:N0} drop={rx_stats.DroppedBlocks:N0} captured={captured_blocks.Count:N0} avg_power={avg_power:N2}");
+
+        if (captured_blocks.Count == 0)
+        {
+            Console.WriteLine($"cycle={cycle} TX | пропуск: нет захваченных блоков");
+            continue;
+        }
+
+        var replay_block_index = 0;
+        var replay_offset = 0;
+        TxSessionStatistics tx_stats;
+
+        using (var tx_session = Device.StartTxSession((tx_block, in metadata) =>
+        {
+            var written = 0;
+            while (written < tx_block.Length)
+            {
+                var current_block = captured_blocks[replay_block_index];
+                var available = current_block.Length - replay_offset;
+                var to_copy = Math.Min(available, tx_block.Length - written);
+
+                current_block.AsSpan(replay_offset, to_copy).CopyTo(tx_block[written..]);
+
+                written += to_copy;
+                replay_offset += to_copy;
+
+                if (replay_offset >= current_block.Length)
+                {
+                    replay_offset = 0;
+                    replay_block_index++;
+                    if (replay_block_index >= captured_blocks.Count)
+                        replay_block_index = 0;
+                }
+            }
+        }, new TxSessionOptions
+        {
+            QueueCapacity = QueueCapacity,
+            OnProducerError = error => Console.WriteLine($"Ошибка генератора TX блока: {error.Message}")
+        }))
+        {
+            await Task.Delay(Math.Max(50, TxMilliseconds));
+            tx_stats = tx_session.GetStatistics();
+        }
+
+        total_tx_underrun += tx_stats.UnderrunBlocks;
+        Console.WriteLine($"cycle={cycle} TX | dequeued={tx_stats.DequeuedBlocks:N0} underrun={tx_stats.UnderrunBlocks:N0} enqueued={tx_stats.EnqueuedBlocks:N0} drop={tx_stats.DroppedBlocks:N0}");
+    }
+
+    var power_over_cycles = Cycles > 0 ? total_avg_power / Cycles : 0;
+
+    Console.WriteLine("\nИтог быстрого переключения:");
+    Console.WriteLine($"cycles={Cycles}, total_rx_blocks={total_rx_blocks:N0}, total_rx_drop={total_rx_drop:N0}, total_tx_underrun={total_tx_underrun:N0}, avg_power={power_over_cycles:N2}");
 }
