@@ -38,7 +38,7 @@ public sealed class DeviceTxSession : IDisposable
         {
             SingleReader = true,
             SingleWriter = false,
-            FullMode = BoundedChannelFullMode.DropWrite,
+            FullMode = BoundedChannelFullMode.Wait,
             AllowSynchronousContinuations = false
         });
 
