@@ -27,6 +27,8 @@ P2:
 - Нет удобного composable API для DSP-конвейеров
 
 ## Сделано в этой сессии
+- Консольный тест расширен режимами `--mode rx|tx`
+- Добавлен TX стресс-сценарий на одном устройстве (очередь + feeder + метрики underrun)
 - Добавлена overflow-политика `DropOldest` для RX очереди
 - Консольный тест расширен параметрами нагрузки: `--seconds`, `--processing-delay-ms`, `--queue`, `--drop-oldest`
 - Исправлена критичная семантика bounded-очереди: `Channel` переведён с `DropWrite` на `Wait` для явного контроля переполнения через `TryWrite`
@@ -110,6 +112,16 @@ P2:
 - Сценарий: RX через `DeviceRxSession`, искусственная задержка обработки `20ms`, очередь `16`, политика `DropOldest`, длительность ~5 сек
 - Результат: `recv=385`, `proc=238`, `drop=131`, `q≈15..16`
 - Вывод: переполнение очереди детектируется корректно, статистика дропов соответствует нагрузке
+
+## Аппаратная проверка (TX)
+- Сценарий: `--mode tx --seconds 5 --queue 16 --tx-feed-delay-ms 20 --tx-vga 0`
+- Результат: `dequeued=161`, `underrun=223`, `enqueued=161`, `dropped=0`
+- Вывод: underrun в TX корректно наблюдается и измеряется при медленной подаче блоков в очередь
+
+## Быстрые команды запуска
+- RX базовый: `dotnet run --project .\\Tests\\MathCore.HackRF.ConsoleTests\\MathCore.HackRF.ConsoleTests.csproj -c Debug -- --mode rx --seconds 5`
+- RX стресс: `dotnet run --project .\\Tests\\MathCore.HackRF.ConsoleTests\\MathCore.HackRF.ConsoleTests.csproj -c Debug -- --mode rx --seconds 5 --processing-delay-ms 20 --queue 16 --drop-oldest`
+- TX стресс: `dotnet run --project .\\Tests\\MathCore.HackRF.ConsoleTests\\MathCore.HackRF.ConsoleTests.csproj -c Debug -- --mode tx --seconds 5 --queue 16 --tx-feed-delay-ms 20 --tx-vga 0`
 
 ## Как восстановить контекст на другой машине
 1. Открыть эту ветку и файл docs/streaming-architecture-tracking.md
