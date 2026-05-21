@@ -1,4 +1,5 @@
 ﻿using MathCore.HackRF;
+using MathCore.HackRF.Streaming;
 
 Console.WriteLine("Инициализация HackRF...");
 
@@ -33,82 +34,51 @@ try
     Console.WriteLine($"Усиление VGA: {device.VgaGain} дБ");
     Console.WriteLine($"LNA включён: {device.EnableLNA}");
 
-    // Переменные для обработки данных
     var samples_received = 0L;
-    var start_time = DateTime.Now;
     var max_amplitude = 0.0;
     var min_amplitude = 0.0;
 
-    // Callback для обработки принятых данных
-    int RXCallback(ref TransferInfo transfer)
+    using var rx_session = device.StartRxSession((rx_block, in metadata) =>
     {
-        try
+        samples_received += rx_block.Length / 2;
+
+        for (var i = 0; i + 1 < rx_block.Length; i += 2)
         {
-            var rx_data = transfer.RxBytes; // Получаем принятые данные
+            var i_sample = (sbyte)rx_block[i];
+            var q_sample = (sbyte)rx_block[i + 1];
+            var amplitude = Math.Sqrt(i_sample * i_sample + q_sample * q_sample);
 
-            if (rx_data.Length == 0) return 0;
-
-            // Подсчитываем статистику
-            samples_received += rx_data.Length / 2; // IQ-данные (2 байта на отсчёт)
-
-            // Вычисляем амплитуду сигнала (простой алгоритм)
-            for (var i = 0; i < rx_data.Length; i += 2)
-            {
-                if (i + 1 >= rx_data.Length) break;
-
-                var i_sample = (sbyte)rx_data[i]; // I компонента
-                var q_sample = (sbyte)rx_data[i + 1]; // Q компонента
-
-                var amplitude = Math.Sqrt(i_sample * i_sample + q_sample * q_sample);
-
-                if (amplitude > max_amplitude) max_amplitude = amplitude;
-                if (amplitude < min_amplitude || min_amplitude == 0) min_amplitude = amplitude;
-            }
-
-            // Выводим статистику каждые 1000 блоков
-            if (samples_received % (HackRFLib.SamplesPerBlock * 1000) == 0)
-            {
-                var elapsed = DateTime.Now - start_time;
-                var rate = samples_received / elapsed.TotalSeconds;
-
-                Console.WriteLine($"Принято: {samples_received:N0} отсчётов | " + $"Скорость: {rate / 1_000_000:N2} МГц | " + $"Амплитуда: min={min_amplitude:N1}, max={max_amplitude:N1} | " + $"Время: {elapsed.TotalSeconds:N1}с");
-
-                // Сброс статистики амплитуды
-                max_amplitude = 0;
-                min_amplitude = 0;
-            }
-
-            return 0; // Возвращаем 0 для продолжения приёма
+            if (amplitude > max_amplitude) max_amplitude = amplitude;
+            if (amplitude < min_amplitude || min_amplitude == 0) min_amplitude = amplitude;
         }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Ошибка в callback: {ex.Message}");
-            return -1; // Возвращаем -1 для остановки приёма
-        }
+    }, new RxSessionOptions
+    {
+        QueueCapacity = 256,
+        OnProcessingError = error => Console.WriteLine($"Ошибка обработки RX блока: {error.Message}")
+    });
+
+    Console.WriteLine("\nЗапуск приёма данных через DeviceRxSession...");
+    Console.WriteLine("Сбор статистики 5 секунд...");
+
+    var start_time = DateTime.UtcNow;
+    for (var i = 0; i < 5; i++)
+    {
+        await Task.Delay(TimeSpan.FromSeconds(1));
+        var stats = rx_session.GetStatistics();
+        Console.WriteLine(
+            $"t={i + 1}s | recv={stats.ReceivedBlocks:N0} | proc={stats.ProcessedBlocks:N0} | drop={stats.DroppedBlocks:N0} | q={stats.CurrentQueueLength:N0} | last={stats.LastProcessingMilliseconds:N3}ms | max={stats.MaxProcessingMilliseconds:N3}ms");
     }
 
-    Console.WriteLine("\nЗапуск приёма данных...");
-    Console.WriteLine("Нажмите любую клавишу для остановки.");
+    var elapsed = DateTime.UtcNow - start_time;
+    var avg_rate = samples_received / Math.Max(elapsed.TotalSeconds, 0.001);
+    var final_stats = rx_session.GetStatistics();
 
-    // Запускаем приём
-    device.StartRX(RXCallback);
-
-    // Ждём нажатия клавиши
-    Console.ReadKey();
-
-    Console.WriteLine("\nОстановка приёма...");
-
-    // Останавливаем приём
-    device.StopRX();
-
-    var total_time = DateTime.Now - start_time;
-    var avg_rate = samples_received / total_time.TotalSeconds;
-
-    Console.WriteLine($"\nСтатистика приёма:");
-    Console.WriteLine($"Общее время: {total_time.TotalSeconds:F1} секунд");
+    Console.WriteLine("\nСтатистика приёма:");
+    Console.WriteLine($"Общее время: {elapsed.TotalSeconds:F1} секунд");
     Console.WriteLine($"Принято отсчётов: {samples_received:N0}");
     Console.WriteLine($"Средняя скорость: {avg_rate / 1_000_000:F2} МГц");
-    Console.WriteLine($"Объём данных: {samples_received * 2:N0} байт ({(samples_received * 2) / (1024.0 * 1024.0):F1} МБ)");
+    Console.WriteLine($"Амплитуда: min={min_amplitude:N1}, max={max_amplitude:N1}");
+    Console.WriteLine($"RX blocks: recv={final_stats.ReceivedBlocks:N0}, proc={final_stats.ProcessedBlocks:N0}, drop={final_stats.DroppedBlocks:N0}");
 }
 catch (Exception ex)
 {

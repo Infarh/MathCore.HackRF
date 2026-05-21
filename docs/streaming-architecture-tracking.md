@@ -27,7 +27,10 @@ P2:
 - Нет удобного composable API для DSP-конвейеров
 
 ## Сделано в этой сессии
+- Добавлены компоненты передачи: `DeviceTxSession`, `TxSessionOptions`, `TxSessionStatistics`, `TxBlockProducer`
+- Добавлена `DeviceRelaySession` для сценария RX устройства A -> TX устройства B
 - Внедрён новый high-level API `Device.StartRxSession(...)` для безопасного потокового приёма
+- Расширен API `Device`: `StartTxSession(...)` и `StartRelaySession(...)`
 - Добавлен `DeviceRxSession` с bounded-очередью (Channel) между callback и обработчиком
 - Добавлена телеметрия сессии (`RxSessionStatistics`): received/dropped/processed, bytes, queue length, last/max processing time
 - Горячий путь обработки переводится через `ReadOnlySpan<byte>` в пользовательский процессор
@@ -92,6 +95,13 @@ P2:
 2. Внедрить bounded очередь/кольцевой буфер и политику backpressure
 3. Добавить StreamStats + события диагностики
 4. Написать интеграционный тест на сценарий RX->TX relay
+
+## Аппаратная проверка (Smoke)
+- Устройство: HackRF One, serial `000000000000000015a863dc24604b87`
+- Сценарий: RX через `DeviceRxSession` в течение ~5 сек
+- Параметры: 433 МГц, sample rate 10 МГц, BW 10 МГц, LNA 32 дБ, VGA 40 дБ
+- Результат: `recv=386`, `proc=386`, `drop=0`, средняя скорость ~9.99 МГц
+- Вывод: базовый session-слой подтверждён на реальном устройстве, признаков overrun в тестовом окне не выявлено
 
 ## Как восстановить контекст на другой машине
 1. Открыть эту ветку и файл docs/streaming-architecture-tracking.md
