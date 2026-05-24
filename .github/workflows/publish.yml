@@ -1,4 +1,4 @@
-﻿name: Publish NuGet.org
+name: Publish NuGet.org
 
 on:
   push:
@@ -53,7 +53,7 @@ jobs:
         run: dotnet pack ${{ env.PROJECT_NAME }} -c Release --no-build -v q -o ${{ github.workspace }}/ReleasePack --include-symbols
       
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4.4.0
+        uses: actions/upload-artifact@v6.0.0
         with:
           name: Release
           path: ${{ github.workspace }}/ReleasePack
