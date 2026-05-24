@@ -8,9 +8,9 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <Version>0.0.0</Version>
+    <Version>0.0.1</Version>
     <PackageReleaseNotes>
-      Старт проекта
+      Добавлены механизмы работы с потоковой передачей данных
     </PackageReleaseNotes>
   </PropertyGroup>
 
