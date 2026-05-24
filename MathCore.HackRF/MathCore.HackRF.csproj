@@ -31,8 +31,8 @@
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <Copyright>shmachilin@yandex.ru</Copyright>
     <Authors>Shmachilin P.A.</Authors>
-    <PackageProjectUrl>github.com/infarh/mathcore.hackrf</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/infarh/mathcore.hackrfr.git</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/infarh/MathCore.HackRF</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/infarh/MathCore.HackRF.git</RepositoryUrl>
     <Description>Библиотека управления SDR HackRF One</Description>
     <PackageTags>HackRF;DSP</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
